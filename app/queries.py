@@ -7,6 +7,29 @@ def get_connection():
     db_path = os.path.join(base_dir, '..', 'ecommerce_brasil.db')
     return sqlite3.connect(db_path)
 
+def get_unique_status():
+    conn = get_connection()
+    query = "SELECT DISTINCT Purchase_Status FROM orders"
+    status = pd.read_sql(query, conn)['Purchase_Status'].to_list()
+    conn.close()
+    return status
+
+def get_filtered_data(status_filter):
+    conn = get_connection()
+    where_clause = "" if  status_filter == 'Todos' else f'Where o.Purchase_Status = "{status_filter}"'
+    query = f"""
+    SELECT
+        o.Id, o.Order_Date, o.Total, o.Purchase_Status,
+        p.Subcategory
+    FROM orders o
+    JOIN shopping s ON o.Id = s.Id
+    JOIN products p ON s.Product = p.Product_Name
+    {where_clause}
+    """
+    df = pd.read_sql(query, conn)
+    conn.close()
+    return df
+
 def get_kpis():
     conn = get_connection()
     # Query para métricas globais
