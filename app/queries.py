@@ -19,41 +19,18 @@ def get_filtered_data(status_filter):
     where_clause = "" if  status_filter == 'Todos' else f'Where o.Purchase_Status = "{status_filter}"'
     query = f"""
     SELECT
-        o.Id, o.Order_Date, o.Total, o.Purchase_Status,
-        p.Subcategory
+        o.Id, 
+        o.Order_Date, 
+        o.Total, 
+        o.payment,
+        o.Purchase_Status,
+        p.Subcategory,
+        c.State
     FROM orders o
     JOIN shopping s ON o.Id = s.Id
     JOIN products p ON s.Product = p.Product_Name
+    JOIN customers c ON o.Id = c.Id
     {where_clause}
-    """
-    df = pd.read_sql(query, conn)
-    conn.close()
-    return df
-
-def get_kpis():
-    conn = get_connection()
-    # Query para métricas globais
-    query = """
-    SELECT
-        SUM(Total) as faturamento_total,
-        COUNT(Id) as total_pedidos,
-        AVG(Total) as ticket_medio
-    FROM orders
-    """
-    df = pd.read_sql(query, conn)
-    conn.close()
-    return df
-
-def get_vendas_por_dia():
-    conn = get_connection()
-    # Agrupando vendas por data
-    query = """
-    SELECT
-        DATE(Order_Date) as data_venda,
-        SUM(Total) as faturamento_diario
-    FROM orders
-    GROUP BY data_venda
-    ORDER BY data_venda
     """
     df = pd.read_sql(query, conn)
     conn.close()
