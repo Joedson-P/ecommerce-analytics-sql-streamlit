@@ -60,7 +60,7 @@ with tab1:
     kpi2.metric("Pedidos", f"{len(df_filtered)}")
     kpi3.metric("Ticket Médio", f"R$ {df_filtered['Total'].mean() if not df_filtered.empty else 0:,.2f}")
 
-    st.divider()
+    st.markdown("---")
 
     # --- LINHA 2: Gráficos ---
     st.subheader("Evolução de Vendas no Tempo")
