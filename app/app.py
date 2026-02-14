@@ -15,7 +15,7 @@ selected_status = st.sidebar.selectbox("Selecione o Status da Compra", status_li
 # --- CARREGAMENTO DE DADOS FILTRADOS ---
 df_filtered = get_filtered_data(selected_status)
 
-st.sidebar.divider()
+st.sidebar.markdown("---")
 st.sidebar.subheader("Período")
 
 df_filtered['Order_Date'] = pd.to_datetime(df_filtered['Order_Date'])
@@ -36,7 +36,7 @@ if len(date_range) == 2:
         (df_filtered['Order_Date'].dt.date <= end_date)
     ]
 
-st.sidebar.divider()
+st.sidebar.markdown("---")
 st.sidebar.subheader("Exportar Dados")
 csv = df_filtered.to_csv(index=False).encode('utf-8')
 st.sidebar.download_button(
