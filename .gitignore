@@ -209,9 +209,6 @@ __marimo__/
 # Data
 data/
 
-# Database
-*.db
-
 # Notebooks e Logs
 .ipynb_checkpoints/
 *.log
