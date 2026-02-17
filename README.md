@@ -19,6 +19,9 @@ Dashboard interativo desenvolvido para analisar dados de um e-commerce brasileir
 - Análise de sazonalidade e evolução diária de vendas.
 - Distribuição de _market share_ por método de pagamento.
 
+## Fonte de Dados
+- [E-Commerce Analytics Dataset - Brazil]: (https://www.kaggle.com/datasets/joocarlosjr/e-commerce-analytics-dataset-brazil)
+
 ## Como rodar o projeto
 1. Clone o repositório.
 2. Instale as dependências: `pip install -r requirements.txt`.
