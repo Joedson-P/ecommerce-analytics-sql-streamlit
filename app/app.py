@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 from queries import get_unique_status, get_filtered_data
 import plotly.express as px
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+
 
 # Configuração da página
 st.set_page_config(page_title="Dashboard de Vendas E-commerce", layout="wide")
@@ -36,6 +39,7 @@ if len(date_range) == 2:
         (df_filtered['Order_Date'].dt.date <= end_date)
     ]
 
+# Botão de download
 st.sidebar.markdown("---")
 st.sidebar.subheader("Exportar Dados")
 csv = df_filtered.to_csv(index=False).encode('utf-8')
@@ -46,12 +50,52 @@ st.sidebar.download_button(
     mime='text/csv',
 )
 
+# Função para segmentação
+def processar_segmentacao(df):
+    if df.empty:
+        return pd.DataFrame()
+    
+    # Preparação dos dados
+    data_ref = df['Order_Date'].max() + pd.Timedelta(days=1)
+
+    df_rfm = df.groupby('Id').agg({
+        'Order_Date': lambda x: (data_ref - x.max()).days,
+        'Total': 'sum'
+    }).rename(columns={
+        'Order_Date': 'Recencia',
+        'Total': 'Monetario'
+    }).reset_index()
+
+    # Machine Learning
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(df_rfm[['Recencia', 'Monetario']])
+
+    model = KMeans(n_clusters=4, random_state=42, n_init=10)
+    df_rfm['Cluster'] = model.fit_predict(X_scaled)
+
+    # Nomeação inteligente dos Clusters
+    resumo = df_rfm.groupby('Cluster').agg({'Recencia':'mean', 'Monetario':'mean'})
+
+    nomes = {}
+    for i, row in resumo.iterrows():
+        if row['Monetario']>resumo['Monetario'].quantile(0.75):
+            nomes[i] = 'VIP'
+        elif row['Recencia'] <= resumo['Recencia'].median() and row['Monetario'] > resumo['Monetario'].median():
+            nomes[i] = 'Potencial'
+        elif row['Recencia'] <= resumo['Recencia'].median():
+            nomes[i] = 'Ativo'
+        else:
+            nomes[i] = 'Em Risco'
+    
+    df_rfm['Segmento'] = df_rfm['Cluster'].map(nomes)
+    return df_rfm
+
 # --- TÍTULO ---
 st.title("Dashboard de Análise de E-commerce")
 st.markdown(f"Exibindo dados para o status **{selected_status}**")
 
 # --- CRIAÇÃO DE ABAS ---
-tab1, tab2, tab3 = st.tabs(["Visão Geral", "Análise Regional", "Pagamentos"])
+tab1, tab2, tab3, tab4 = st.tabs(["Visão Geral", "Análise Regional", "Pagamentos", "Segmentação"])
 
 with tab1:
     # --- LINHA 1: KPIs Dinâmicos ---
@@ -107,3 +151,34 @@ with tab3:
     fig_pay = px.pie(vendas_pay, values='Total', names='payment', hole=0.3,
                      color_discrete_sequence=px.colors.sequential.RdBu)
     st.plotly_chart(fig_pay, use_container_width=True)
+
+with tab4:
+    st.subheader('Segmentação Estratégica de Clientes')
+    st.markdown('Utilizamos o algoritmo **K-Means** para agrupar clientes por comportamento de compra.')
+
+    df_segmentado = processar_segmentacao(df_filtered)
+    
+    if not df_segmentado.empty:
+        col1, col2, col3, col4 = st.columns(4)
+
+        for i, seg in enumerate(['VIP', 'Potencial', 'Ativo', 'Em Risco']):
+            dados_seg = df_segmentado[df_segmentado['Segmento'] == seg]
+            cols = [col1, col2, col3, col4]
+            cols[i].metric(seg, f"{len(dados_seg)} Clientes", f"R$ {dados_seg['Monetario'].mean():,.0f} avg")
+
+        st.markdown("---")
+
+        # Gráfico Scatter Plot Interativo
+        fig_seg = px.scatter(
+            df_segmentado,
+            x='Recencia',
+            y='Monetario',
+            color='Segmento',
+            title='Distribuição de Clientes por Segmento',
+            labels={'Recencia':'Dias desde a última compra', 'Monetario':'Valor Total Gasto (R$)'},
+            hover_data=['Id'],
+            color_discrete_map={'VIP':'gold', 'Potencial':'green', 'Ativo':'blue', 'Em Risco':'red'}
+        )
+        st.plotly_chart(fig_seg, use_container_width=True)
+    else:
+        st.warning("Sem dados suficientes para segmentação.")
