@@ -159,16 +159,22 @@ with tab4:
     df_segmentado = processar_segmentacao(df_filtered)
     
     if not df_segmentado.empty:
-        col1, col2, col3, col4 = st.columns(4)
+        # --- FILTRO DE SEGMENTOS ---
+        segmentos_disponíveis = df_segmentado['Segmento'].unique().tolist()
+        selecao_segmentos = st.multiselect("Selecione os Segmentos para Análise", options=segmentos_disponíveis, default=segmentos_disponíveis)
 
-        for i, seg in enumerate(['VIP', 'Potencial', 'Ativo', 'Em Risco']):
-            dados_seg = df_segmentado[df_segmentado['Segmento'] == seg]
-            cols = [col1, col2, col3, col4]
-            cols[i].metric(seg, f"{len(dados_seg)} Clientes", f"R$ {dados_seg['Monetario'].mean():,.0f} avg")
+        # Filtrando o DataFrame com base na seleção
+        df_display = df_segmentado[df_segmentado['Segmento'].isin(selecao_segmentos)]
+
+        # --- KPIs POR SEGMENTO ---
+        col1, col2, col3 = st.columns(3)
+        col1.metric('Clientes Selecionados', len(df_display))
+        col2.metric('Ticket Médio do Grupo', f'R$ {df_display['Monetario'].mean():,.2f}')
+        col3.metric('Recência Média', f'{df_display['Recencia'].mean():,.0f} dias')
 
         st.markdown("---")
 
-        # Gráfico Scatter Plot Interativo
+        # --- GRÁFICO INTERATIVO DE SEGMENTAÇÃO ---
         fig_seg = px.scatter(
             df_segmentado,
             x='Recencia',
@@ -180,5 +186,24 @@ with tab4:
             color_discrete_map={'VIP':'gold', 'Potencial':'green', 'Ativo':'blue', 'Em Risco':'red'}
         )
         st.plotly_chart(fig_seg, use_container_width=True)
+
+        # --- TABELA DE AÇÃO E EXPORTAÇÃO ---
+        st.markdown("### Lista de Clientes no Segmento Selecionado")
+
+        # Formatando a tabela para exibição
+        df_tabela = df_display.copy()
+        df_tabela['Monetario'] = df_tabela['Monetario'].apply(lambda x: f"R$ {x:,.2f}")
+
+        st.dataframe(df_tabela.sort_values('Monetario', ascending=False), use_container_width=True, hide_index=True)
+
+        # Botão de download para o segmento selecionado
+        csv_segmento = df_display.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label=f"Baixar Lista: {', '.join(selecao_segmentos)}",
+            data=csv_segmento,
+            file_name='campanha_segmentada.csv',
+            mime='text/csv'
+        )
+
     else:
         st.warning("Sem dados suficientes para segmentação.")
